@@ -1,18 +1,16 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI to DockerHub
+name: CI to Docker Hub
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     
     steps:
-
       - name: Check Out Repo 
         uses: actions/checkout@v2
 
@@ -21,6 +19,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: Set up Docker Buildx
         id: buildx
@@ -32,8 +38,11 @@ jobs:
         with:
           context: ./
           file: ./Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/simplewhale:latest
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/simplewhaledemo:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
